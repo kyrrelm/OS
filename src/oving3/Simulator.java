@@ -47,8 +47,8 @@ public class Simulator implements Constants
 		eventQueue = new EventQueue();
 		memory = new Memory(memoryQueue, memorySize, statistics);
 		clock = 0;
-		this.cpu = new CPU(cpuQueue, maxCpuTime, statistics);
-		this.io = new IO(ioQueue, avgIoTime, statistics);
+		this.cpu = new CPU(gui, memory, eventQueue, cpuQueue, maxCpuTime, statistics);
+		this.io = new IO(gui, cpu, eventQueue, ioQueue, avgIoTime, statistics);
     }
 
     /**
@@ -72,6 +72,8 @@ public class Simulator implements Constants
 			clock = event.getTime();
 			// Let the memory unit and the GUI know that time has passed
 			memory.timePassed(timeDifference);
+			cpu.timePassed(timeDifference);
+			io.timePassed(timeDifference);
 			gui.timePassed(timeDifference);
 			// Deal with the event
 			if (clock < simulationLength) {
@@ -120,6 +122,11 @@ public class Simulator implements Constants
 		Process newProcess = new Process(memory.getMemorySize(), clock);
 		memory.insertProcess(newProcess);
 		flushMemoryQueue();
+		
+		if(cpu.isIdle()){
+			cpu.executeProcess(clock);
+		}
+		
 		// Add an event for the next process arrival
 		long nextArrivalTime = clock + 1 + (long)(2*Math.random()*avgArrivalInterval);
 		eventQueue.insertEvent(new Event(NEW_PROCESS, nextArrivalTime));
@@ -135,18 +142,11 @@ public class Simulator implements Constants
 		Process p = memory.checkMemory(clock);
 		// As long as there is enough memory, processes are moved from the memory queue to the cpu queue
 		while(p != null) {
-			
-			// TODO: Add this process to the CPU queue!
 			cpu.getCpuQueue().insert(p);
-			// Also add new events to the event queue if needed
-
-			// Since we haven't implemented the CPU and I/O device yet,
-			// we let the process leave the system immediately, for now.
-			memory.processCompleted(p);
+			p.setNofTimesInCpuQueue(p.getNofTimesInCpuQueue()+1);
+			p.enteredCpuQueue(clock);
 			// Try to use the freed memory:
 			flushMemoryQueue();
-			// Update statistics
-			p.updateStatistics(statistics);
 
 			// Check for more free memory
 			p = memory.checkMemory(clock);
@@ -157,14 +157,14 @@ public class Simulator implements Constants
 	 * Simulates a process switch.
 	 */
 	private void switchProcess() {
-		// Incomplete
+		cpu.switchProcess(clock);
 	}
 
 	/**
 	 * Ends the active process, and deallocates any resources allocated to it.
 	 */
 	private void endProcess() {
-		// Incomplete
+		cpu.endProcess(clock);
 	}
 
 	/**
@@ -172,7 +172,7 @@ public class Simulator implements Constants
 	 * perform an I/O operation.
 	 */
 	private void processIoRequest() {
-		// Incomplete
+		io.processRequest(clock);
 	}
 
 	/**
@@ -180,7 +180,7 @@ public class Simulator implements Constants
 	 * is done with its I/O operation.
 	 */
 	private void endIoOperation() {
-		// Incomplete
+		io.endIo(clock);
 	}
 
 	/**

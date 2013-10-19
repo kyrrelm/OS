@@ -32,7 +32,7 @@ public class Process implements Constants
 	/** The time that this process has spent waiting in the memory queue */
 	private long timeSpentWaitingForMemory = 0;
 	/** The time that this process has spent waiting in the CPU queue */
-	private long timeSpentInReadyQueue = 0;
+	private long timeSpentInCpuQueue = 0;
 	/** The time that this process has spent processing */
     private long timeSpentInCpu = 0;
 	/** The time that this process has spent waiting in the I/O queue */
@@ -41,12 +41,15 @@ public class Process implements Constants
 	private long timeSpentInIo = 0;
 
 	/** The number of times that this process has been placed in the CPU queue */
-	private long nofTimesInReadyQueue = 0;
+	private int nofTimesInCpuQueue = 0;
 	/** The number of times that this process has been placed in the I/O queue */
-	private long nofTimesInIoQueue = 0;
+	private int nofTimesInIoQueue = 0;
 
 	/** The global time of the last event involving this process */
 	private long timeOfLastEvent;
+	private long timeOfEnteringCpuQueue = 0;
+	private long timeOfEnteringIoQueue = 0;
+	public long timeInIo = 0;
 
 	/**
 	 * Creates a new process with given parameters. Other parameters are randomly
@@ -61,6 +64,7 @@ public class Process implements Constants
 		cpuTimeNeeded = 100 + (long)(Math.random()*9900);
 		// Average interval between I/O requests varies from 1% to 25% of CPU time needed
 		avgIoInterval = (1 + (long)(Math.random()*25))*cpuTimeNeeded/100;
+		timeToNextIoOperation = generateTimeToNextIoOperation();
 		// The first and latest event involving this process is its creation
 		timeOfLastEvent = creationTime;
 		// Assign a process ID
@@ -70,6 +74,11 @@ public class Process implements Constants
 		int green = 64+(int)((processId*47)%128);
 		int blue = 64+(int)((processId*53)%128);
 		color = new Color(red, green, blue);
+		timeSpentInCpu = cpuTimeNeeded;
+	}
+	
+	public long generateTimeToNextIoOperation() {
+		return (long) (2 * Math.random() * avgIoInterval);
 	}
 
 	/**
@@ -99,6 +108,18 @@ public class Process implements Constants
 		  timeSpentWaitingForMemory += clock - timeOfLastEvent;
 		  timeOfLastEvent = clock;
     }
+    public void enteredCpuQueue(long clock){
+    	timeOfEnteringCpuQueue = clock;
+    }
+    public void leftCpuQueue(long clock){
+    	timeSpentInCpuQueue += clock - timeOfEnteringCpuQueue;
+    }
+    public void enteredIoQueue(long clock){
+    	timeOfEnteringIoQueue = clock;
+    }
+    public void leftIoQueue(long clock){
+    	timeSpentWaitingForIo += clock - timeOfEnteringIoQueue;
+    }
 
     /**
 	 * Returns the amount of memory needed by this process.
@@ -116,8 +137,45 @@ public class Process implements Constants
      */
 	public void updateStatistics(Statistics statistics) {
 		statistics.totalTimeSpentWaitingForMemory += timeSpentWaitingForMemory;
+		statistics.totalTimeSpentInCpuQueue += timeSpentInCpuQueue;
+		statistics.totalTimeSpentInIoQueue += timeOfEnteringIoQueue;
+		statistics.totalTimeSpentInCpu += timeSpentInCpu;
+		statistics.totalTimeSpentInIo += timeInIo;
 		statistics.nofCompletedProcesses++;
+		statistics.totalNummerOfTimesInCpuQueue += nofTimesInCpuQueue;
+		statistics.totalNummerOfTimesInIoQueue += nofTimesInIoQueue;
 	}
 
-	// Add more methods as needed
+	public long getCpuTimeNeeded() {
+		return cpuTimeNeeded;
+	}
+
+	public void setCpuTimeNeeded(long cpuTimeNeeded) {
+		this.cpuTimeNeeded = cpuTimeNeeded;
+	}
+
+	public long getTimeToNextIoOperation() {
+		return timeToNextIoOperation;
+	}
+
+	public void setTimeToNextIoOperation(long timeToNextIoOperation) {
+		this.timeToNextIoOperation = timeToNextIoOperation;
+	}
+
+	public int getNofTimesInCpuQueue() {
+		return nofTimesInCpuQueue;
+	}
+
+	public void setNofTimesInCpuQueue(int nofTimesInCpuQueue) {
+		this.nofTimesInCpuQueue = nofTimesInCpuQueue;
+	}
+
+	public int getNofTimesInIoQueue() {
+		return nofTimesInIoQueue;
+	}
+
+	public void setNofTimesInIoQueue(int nofTimesInIoQueue) {
+		this.nofTimesInIoQueue = nofTimesInIoQueue;
+	}
+	
 }
